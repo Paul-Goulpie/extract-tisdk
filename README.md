@@ -6,13 +6,34 @@ Works by reverse-engineering the embedded BitRock/CookFS payload: parsing the in
 
 ---
 
+## Installation
+
+```bash
+pip install extract-tisdk
+```
+
+Or directly from source:
+
+```bash
+git clone https://github.com/youruser/extract-tisdk.git
+cd extract-tisdk
+pip install .
+```
+
+### Requirements
+
+- Python 3.7+, standard library only (`zlib`, `struct`, `argparse`, `dataclasses`)
+- Tested against `ti-processor-sdk-linux-rt-am64xx-evm-11.02.08.02-Linux-x86-Install.bin`
+
+---
+
 ## Background
 
 TI Processor SDK installers are built with [BitRock InstallBuilder](https://installbuilder.com/). The payload is stored as a [CookFS 1.4](https://wiki.tcl-lang.org/page/cookfs) virtual filesystem appended to the ELF binary, followed by a Metakit4 database that holds the manifest, cookfsinfo, and installer scripts.
 
 The installer extracts files to a temp directory and deletes them after installation — making it impossible to intercept the raw archive through normal means.
 
-This script reads the binary directly:
+This tool reads the binary directly:
 
 1. Locates the `\x01CFS0002` magic to find the CookFS section and the Metakit4 database.
 2. Parses `cookfsinfo.txt` (end offset) and `manifest.txt` (file list with sizes and offsets) from Metakit4.
@@ -22,17 +43,10 @@ This script reads the binary directly:
 
 ---
 
-## Requirements
-
-- Python 3.7+, standard library only (`zlib`, `struct`, `argparse`, `dataclasses`)
-- Tested against `ti-processor-sdk-linux-rt-am64xx-evm-11.02.08.02-Linux-x86-Install.bin`
-
----
-
 ## Usage
 
 ```
-extract_tisdk.py <installer.bin> [options]
+extract-tisdk <installer.bin> [options]
 ```
 
 ### Actions (mutually exclusive)
@@ -75,16 +89,16 @@ Auto-detected by default; override only if needed.
 
 ```bash
 # List all files in the installer
-python3 extract_tisdk.py ti-processor-sdk-*.bin --list
+extract-tisdk ti-processor-sdk-*.bin --list
 
 # Extract everything to /opt/tisdk
-python3 extract_tisdk.py ti-processor-sdk-*.bin -o /opt/tisdk
+extract-tisdk ti-processor-sdk-*.bin -o /opt/tisdk
 
 # Extract only the core bundle, dropping the leading path components
-python3 extract_tisdk.py ti-processor-sdk-*.bin -f tisdk-core-bundle --flatten -o /tmp
+extract-tisdk ti-processor-sdk-*.bin -f tisdk-core-bundle --flatten -o /tmp
 
 # Dump the embedded manifest and cookfsinfo for inspection
-python3 extract_tisdk.py ti-processor-sdk-*.bin --dump-meta -o /tmp/meta
+extract-tisdk ti-processor-sdk-*.bin --dump-meta -o /tmp/meta
 ```
 
 ---
