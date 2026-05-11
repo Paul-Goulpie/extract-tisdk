@@ -15,7 +15,7 @@ pip install extract-tisdk
 Or directly from source:
 
 ```bash
-git clone https://github.com/youruser/extract-tisdk.git
+git clone https://github.com/Paul-Goulpie/extract-tisdk.git
 cd extract-tisdk
 pip install .
 ```
