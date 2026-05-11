@@ -309,6 +309,25 @@ def parse_manifest(text: str) -> List[FileEntry]:
 
 
 # ---------------------------------------------------------------------------
+# Milestone inference from manifest
+# ---------------------------------------------------------------------------
+def infer_milestone(files: List[FileEntry]) -> Optional[int]:
+    """
+    Derive the milestone size from the manifest chunk list.
+
+    All non-last chunks of every file have exactly milestone bytes, so the
+    milestone equals the maximum chunk size seen across all files.
+    Returns None if no chunk data is available.
+    """
+    best = None
+    for entry in files:
+        for _, size in entry.chunks:
+            if best is None or size > best:
+                best = size
+    return best
+
+
+# ---------------------------------------------------------------------------
 # Output path construction
 # ---------------------------------------------------------------------------
 def make_out_path(entry: FileEntry, out_dir: str,
@@ -537,8 +556,9 @@ def main() -> None:
         '--block', type=int, default=DEFAULT_BLOCK, metavar='N',
         help=f'CookFS chunk size in bytes (default: {DEFAULT_BLOCK})')
     parser.add_argument(
-        '--milestone', type=int, default=DEFAULT_MILESTONE, metavar='N',
-        help=f'Milestone segment size in bytes (default: {DEFAULT_MILESTONE})')
+        '--milestone', type=int, default=None, metavar='N',
+        help=f'Milestone segment size in bytes (default: inferred from manifest, '
+             f'fallback {DEFAULT_MILESTONE})')
 
     # Miscellaneous
     parser.add_argument(
@@ -614,6 +634,14 @@ def main() -> None:
     all_files = [e for e in parse_manifest(manifest_txt) if e.size > 0]
     print(f'  Manifest       : {len(all_files)} file(s)')
 
+    if args.milestone is not None:
+        milestone = args.milestone
+        print(f'  Milestone      : {milestone} bytes (manual)')
+    else:
+        milestone = infer_milestone(all_files) or DEFAULT_MILESTONE
+        source = 'manifest' if infer_milestone(all_files) else 'default'
+        print(f'  Milestone      : {milestone} bytes ({source})')
+
     # -----------------------------------------------------------------------
     # Phase 2: List mode
     # -----------------------------------------------------------------------
@@ -664,7 +692,7 @@ def main() -> None:
             out_dir    = args.out_dir,
             bin_offset = bin_offset,
             block      = args.block,
-            milestone  = args.milestone,
+            milestone  = milestone,
             strip      = args.strip,
             flatten    = args.flatten,
             no_verify  = args.no_verify,
