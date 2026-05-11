@@ -16,6 +16,7 @@ Usage:
   %(prog)s <installer.bin> -l           # list files
   %(prog)s <installer.bin> -f name.tar  # extract a specific file
   %(prog)s <installer.bin> -o /tmp/out  # output directory
+  %(prog)s <installer.bin> --dump-meta  # write manifest.txt and cookfsinfo.txt
 """
 
 import argparse
@@ -534,6 +535,9 @@ def main() -> None:
         '-f', '--file', nargs='+', metavar='NAME',
         help='Extract only files whose path contains NAME '
              '(case-insensitive, matched against full path or basename)')
+    action.add_argument(
+        '--dump-meta', action='store_true',
+        help='Write manifest.txt and cookfsinfo.txt to out-dir and exit')
 
     # Output destination
     parser.add_argument(
@@ -643,7 +647,27 @@ def main() -> None:
         print(f'  Milestone      : {milestone} bytes ({source})')
 
     # -----------------------------------------------------------------------
-    # Phase 2: List mode
+    # Phase 2: Dump meta mode
+    # -----------------------------------------------------------------------
+    if args.dump_meta:
+        os.makedirs(args.out_dir, exist_ok=True)
+        for filename, content in (
+            ('manifest.txt',   manifest_txt),
+            ('cookfsinfo.txt', cookfsinfo_txt),
+        ):
+            if content is None:
+                print(f'  [skip] {filename} not found', file=sys.stderr)
+                continue
+            out_path = os.path.join(args.out_dir, filename)
+            with open(out_path, 'w', encoding='utf-8') as fh:
+                fh.write(content)
+                if not content.endswith('\n'):
+                    fh.write('\n')
+            print(f'  → {out_path}  ({len(content.encode())} bytes)')
+        return
+
+    # -----------------------------------------------------------------------
+    # Phase 3: List mode
     # -----------------------------------------------------------------------
     if args.list:
         from datetime import datetime
@@ -656,7 +680,7 @@ def main() -> None:
         return
 
     # -----------------------------------------------------------------------
-    # Phase 3: Select files to extract
+    # Phase 4: Select files to extract
     # -----------------------------------------------------------------------
     if args.file:
         filters = [f.lower() for f in args.file]
@@ -683,7 +707,7 @@ def main() -> None:
     os.makedirs(args.out_dir, exist_ok=True)
 
     # -----------------------------------------------------------------------
-    # Phase 4: Extraction
+    # Phase 5: Extraction
     # -----------------------------------------------------------------------
     with open(args.binary, 'rb') as f:
         extract_stream(
